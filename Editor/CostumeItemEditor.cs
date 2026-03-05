@@ -91,7 +91,7 @@ namespace Lace.Editor
             EditorGUILayout.LabelField("LACE - Costume Item", headerStyle);
 
             // ─── メニュー設定 ───
-            BeginSection("メニュー設定");
+            BeginSection("1. メニュー設定");
             EditorGUILayout.PropertyField(_parameterName, new GUIContent("パラメータ名"));
             EditorGUILayout.PropertyField(_generateMenuItem, new GUIContent("メニュー生成"));
 
@@ -126,8 +126,15 @@ namespace Lace.Editor
             EndSection();
 
             // ─── 制御対象 ───
-            BeginSection("制御対象");
-            EditorGUILayout.PropertyField(_target, new GUIContent("対象タイプ"));
+            BeginSection("2. 制御対象");
+            // 対象タイプ 2択ボタン
+            {
+                int newTargetIdx = GUILayout.Toolbar(
+                    _target.enumValueIndex,
+                    new[] { "GameObject", "BlendShape" });
+                if (newTargetIdx != _target.enumValueIndex)
+                    _target.enumValueIndex = newTargetIdx;
+            }
             EditorGUILayout.PropertyField(_targetObjects, new GUIContent("オブジェクト"), true);
 
             var targetType = (RuleTarget)_target.enumValueIndex;
@@ -140,12 +147,10 @@ namespace Lace.Editor
             EndSection();
 
             // ─── 条件式（展開式） ───
-            BeginSection("条件式");
+            BeginSection("3. 条件式");
 
-            // ConditionToString（有効条件）のサマリーを先頭に表示
+            // 条件式サマリーを先頭に表示
             DrawConditionSummary();
-            EditorGUILayout.Space(2);
-            DrawParameterCost();
             EditorGUILayout.Space(6);
 
             _expandAdditionalCondition = EditorGUILayout.Foldout(
@@ -171,12 +176,13 @@ namespace Lace.Editor
                         MessageType.Info);
                 }
 
-                DrawCondition(_condition, 0);
+                DrawSelfParamReadOnly();
+                DrawConditionEditor();
             }
             EndSection();
 
-            // ─── 発動条件 ───
-            BeginSection("発動条件");
+            // ─── 表示条件 / 発動条件 ───
+            BeginSection("4. " + (targetType == RuleTarget.GameObject ? "表示条件" : "発動条件"));
             if (targetType == RuleTarget.GameObject)
             {
                 // matchActive=true/unmatchActive=false → 「条件式が真」のとき発動(index 0)
@@ -231,17 +237,14 @@ namespace Lace.Editor
             else
             {
                 var summary = ConditionToString(effectiveCondition);
-                // 末尾の「の」をとるかスペースの調整
                 var trimmed = summary.TrimEnd();
                 if (trimmed.EndsWith("の")) trimmed = trimmed.Substring(0, trimmed.Length - 1);
                 var richStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel) { richText = true };
-                EditorGUILayout.LabelField($"{trimmed}", richStyle);
+                EditorGUILayout.LabelField(trimmed, richStyle);
             }
         }
 
-        /// <summary>
-        /// Condition ツリーを自然な日本語に変換する。
-        /// </summary>
+        /// <summary>Condition ツリーを自然な日本語に変換する。</summary>
         private static string ConditionToString(Condition cond)
         {
             if (cond == null) return "?";
@@ -270,7 +273,6 @@ namespace Lace.Editor
 
                 case ConditionType.NOT:
                     if (cond.children == null || cond.children.Count == 0) return "（条件なし）";
-                    // NOT(Param) はパラメータ側の期待値を反転して直接表現
                     var notChild = cond.children[0];
                     if (notChild != null && notChild.type == ConditionType.Param
                         && !string.IsNullOrEmpty(notChild.parameterName))
@@ -286,9 +288,6 @@ namespace Lace.Editor
             }
         }
 
-        /// <summary>
-        /// 子条件が上位演算子と組み合わせる際に括弧で囲むか判断する。
-        /// </summary>
         private static string WrapIfComplex(Condition child, ConditionType parentType)
         {
             var s = ConditionToString(child);
@@ -297,107 +296,278 @@ namespace Lace.Editor
             return s;
         }
 
-        // ─── パラメータコスト ───
+        // ─── 自身パラメータ（読み取り専用） ───
 
         /// <summary>
-        /// アバター内の全 CostumeItem から Synced Bool パラメータ数を集計し、
-        /// VRChat の上限（256 ビット）に対するコストを表示する。
+        /// メニュー生成が有効な場合、自身のパラメータを暗黙 AND として
+        /// 読み取り専用で表示する。
         /// </summary>
-        private void DrawParameterCost()
+        private void DrawSelfParamReadOnly()
         {
             var item = (CostumeItem)target;
-            var avatar = FindAvatarDescriptor(item.transform);
-            if (avatar == null) return;
+            if (!item.generateMenuItem || string.IsNullOrEmpty(item.parameterName))
+                return;
 
-            var allItems = avatar.GetComponentsInChildren<CostumeItem>(true);
-            var uniqueParams = new HashSet<string>();
-            foreach (var ci in allItems)
+            using (new EditorGUI.DisabledScope(true))
             {
-                if (ci.generateMenuItem && !string.IsNullOrEmpty(ci.parameterName))
-                    uniqueParams.Add(ci.parameterName);
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField(item.parameterName, GUILayout.MinWidth(60));
+                GUILayout.Label("が", GUILayout.Width(14));
+                GUILayout.Toolbar(0, new[] { "ON", "OFF" }, GUILayout.Width(80));
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
             }
 
-            int boolCount = uniqueParams.Count;
-            int bitCost = boolCount; // Bool = 1 bit each
-
-            var costColor = bitCost > 128 ? (bitCost > 200 ? Color.red : Color.yellow) : Color.green;
-            var prevColor = GUI.contentColor;
-            GUI.contentColor = costColor;
-            EditorGUILayout.LabelField(
-                $"パラメータコスト: {bitCost} bits（Bool × {boolCount}）/ 256 bits", EditorStyles.miniLabel);
-            GUI.contentColor = prevColor;
+            // 追加条件がある場合のみ「かつ」セパレータを表示
+            bool hasCondition = item.condition != null
+                && !(item.condition.type == ConditionType.Param
+                     && string.IsNullOrEmpty(item.condition.parameterName));
+            if (hasCondition)
+            {
+                EditorGUILayout.LabelField("── かつ ──",
+                    EditorStyles.centeredGreyMiniLabel);
+            }
         }
 
-        private void DrawCondition(SerializedProperty condProp, int depth)
+        // ─── 条件式エディタ ───
+
+        /// <summary>条件ツリーの描画エントリポイント。</summary>
+        private void DrawConditionEditor()
         {
-            if (condProp == null) return;
+            if (_condition == null) return;
 
-            var typeProp = condProp.FindPropertyRelative("type");
-            var paramNameProp = condProp.FindPropertyRelative("parameterName");
-            var expectedProp = condProp.FindPropertyRelative("expectedValue");
-            var childrenProp = condProp.FindPropertyRelative("children");
-
-            EditorGUI.indentLevel = depth + 1;
-
-            EditorGUILayout.PropertyField(typeProp, new GUIContent("タイプ"));
+            var typeProp = _condition.FindPropertyRelative("type");
+            var childrenProp = _condition.FindPropertyRelative("children");
             var condType = (ConditionType)typeProp.enumValueIndex;
 
-            switch (condType)
+            // AND/OR/NOT で子が 0 → 空の Param に正規化
+            if (condType != ConditionType.Param
+                && (childrenProp == null || childrenProp.arraySize == 0))
             {
-                case ConditionType.Param:
-                {
-                    // ─── パラメータ選択ドロップダウン（テキスト入力なし） ───
-                    DrawParamDropdown(paramNameProp);
-
-                    // ON/OFF 選択
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.PrefixLabel("状態");
-                    int valIdx = expectedProp.boolValue ? 0 : 1;
-                    int newIdx = GUILayout.Toolbar(valIdx, new[] { "ON", "OFF" });
-                    if (newIdx != valIdx) expectedProp.boolValue = (newIdx == 0);
-                    EditorGUILayout.EndHorizontal();
-                    break;
-                }
-
-                case ConditionType.AND:
-                case ConditionType.OR:
-                case ConditionType.NOT:
-                    int maxChildren = condType == ConditionType.NOT ? 1 : int.MaxValue;
-
-                    if (childrenProp != null)
-                    {
-                        for (int i = 0; i < childrenProp.arraySize; i++)
-                        {
-                            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                            var child = childrenProp.GetArrayElementAtIndex(i);
-                            DrawCondition(child, depth + 1);
-
-                            EditorGUILayout.BeginHorizontal();
-                            GUILayout.FlexibleSpace();
-                            if (GUILayout.Button("削除", GUILayout.Width(60)))
-                            {
-                                childrenProp.DeleteArrayElementAtIndex(i);
-                                break;
-                            }
-                            EditorGUILayout.EndHorizontal();
-                            EditorGUILayout.EndVertical();
-                        }
-
-                        if (childrenProp.arraySize < maxChildren)
-                        {
-                            EditorGUILayout.BeginHorizontal();
-                            GUILayout.FlexibleSpace();
-                            if (GUILayout.Button("+ 子条件", GUILayout.Width(80)))
-                            {
-                                childrenProp.InsertArrayElementAtIndex(childrenProp.arraySize);
-                            }
-                            EditorGUILayout.EndHorizontal();
-                        }
-                    }
-                    break;
+                typeProp.enumValueIndex = (int)ConditionType.Param;
+                _condition.FindPropertyRelative("parameterName").stringValue = "";
+                _condition.FindPropertyRelative("expectedValue").boolValue = true;
+                condType = ConditionType.Param;
             }
 
-            EditorGUI.indentLevel = depth;
+            if (condType == ConditionType.Param)
+            {
+                // ルートが単一 Param（デフォルト空 or 単一条件）
+                var paramNameProp = _condition.FindPropertyRelative("parameterName");
+                bool isEmpty = string.IsNullOrEmpty(paramNameProp.stringValue);
+
+                if (!isEmpty)
+                {
+                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                    DrawParamRowInline(_condition, false, -1, null);
+                    EditorGUILayout.EndVertical();
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("（追加条件なし）",
+                        EditorStyles.centeredGreyMiniLabel);
+                }
+
+                EditorGUILayout.Space(2);
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("+ 条件を追加", GUILayout.Width(100)))
+                {
+                    if (isEmpty)
+                    {
+                        typeProp.enumValueIndex = (int)ConditionType.AND;
+                        childrenProp.ClearArray();
+                        childrenProp.InsertArrayElementAtIndex(0);
+                        InitParamChild(childrenProp.GetArrayElementAtIndex(0));
+                    }
+                    else
+                    {
+                        // 単一 Param → AND(既存, 新規) に変換
+                        string savedName = paramNameProp.stringValue;
+                        bool savedExpected =
+                            _condition.FindPropertyRelative("expectedValue").boolValue;
+
+                        typeProp.enumValueIndex = (int)ConditionType.AND;
+                        paramNameProp.stringValue = "";
+
+                        childrenProp.ClearArray();
+                        childrenProp.InsertArrayElementAtIndex(0);
+                        var first = childrenProp.GetArrayElementAtIndex(0);
+                        first.FindPropertyRelative("type").enumValueIndex =
+                            (int)ConditionType.Param;
+                        first.FindPropertyRelative("parameterName").stringValue =
+                            savedName;
+                        first.FindPropertyRelative("expectedValue").boolValue =
+                            savedExpected;
+                        first.FindPropertyRelative("children").ClearArray();
+
+                        childrenProp.InsertArrayElementAtIndex(1);
+                        InitParamChild(childrenProp.GetArrayElementAtIndex(1));
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            else
+            {
+                DrawContainerNode(_condition, 0);
+            }
+        }
+
+        /// <summary>AND/OR/NOT コンテナの描画。</summary>
+        private void DrawContainerNode(SerializedProperty condProp, int depth)
+        {
+            var typeProp = condProp.FindPropertyRelative("type");
+            var childrenProp = condProp.FindPropertyRelative("children");
+            var condType = (ConditionType)typeProp.enumValueIndex;
+
+            // 階層に応じた左マージン
+            float indent = depth * 16f;
+
+            // タイプ選択（フレンドリー名）
+            var labels = new[] { "すべて満たす (AND)", "いずれか満たす (OR)", "否定 (NOT)" };
+            int typeIdx = condType == ConditionType.AND ? 0
+                        : condType == ConditionType.OR  ? 1 : 2;
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(indent);
+            EditorGUILayout.BeginVertical();
+            int newTypeIdx = EditorGUILayout.Popup("結合モード", typeIdx, labels);
+            if (newTypeIdx != typeIdx)
+            {
+                var newType = newTypeIdx == 0 ? ConditionType.AND
+                            : newTypeIdx == 1 ? ConditionType.OR
+                            : ConditionType.NOT;
+                typeProp.enumValueIndex = (int)newType;
+                condType = newType;
+
+                if (condType == ConditionType.NOT && childrenProp.arraySize > 1)
+                {
+                    while (childrenProp.arraySize > 1)
+                        childrenProp.DeleteArrayElementAtIndex(childrenProp.arraySize - 1);
+                }
+            }
+
+            int maxChildren = condType == ConditionType.NOT ? 1 : int.MaxValue;
+            string separator = condType == ConditionType.AND ? "かつ"
+                             : condType == ConditionType.OR  ? "または" : "";
+
+            EditorGUILayout.Space(2);
+
+            if (childrenProp != null)
+            {
+                bool deleted = false;
+                for (int i = 0; i < childrenProp.arraySize; i++)
+                {
+                    // セパレータ（2 番目以降）
+                    if (i > 0 && !string.IsNullOrEmpty(separator))
+                    {
+                        EditorGUILayout.LabelField($"── {separator} ──",
+                            EditorStyles.centeredGreyMiniLabel);
+                    }
+
+                    var child = childrenProp.GetArrayElementAtIndex(i);
+                    var childType =
+                        (ConditionType)child.FindPropertyRelative("type").enumValueIndex;
+
+                    if (childType == ConditionType.Param)
+                    {
+                        // コンパクトなパラメータ行
+                        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                        if (DrawParamRowInline(child, true, i, childrenProp))
+                            deleted = true;
+                        EditorGUILayout.EndVertical();
+                        if (deleted) break;
+                    }
+                    else
+                    {
+                        // ネストされたグループ
+                        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                        EditorGUILayout.LabelField("グループ", EditorStyles.miniBoldLabel);
+                        DrawContainerNode(child, depth + 1);
+
+                        EditorGUILayout.BeginHorizontal();
+                        GUILayout.FlexibleSpace();
+                        if (GUILayout.Button("グループ削除", GUILayout.Width(90)))
+                        {
+                            childrenProp.DeleteArrayElementAtIndex(i);
+                            deleted = true;
+                        }
+                        EditorGUILayout.EndHorizontal();
+                        EditorGUILayout.Space(10);
+                        EditorGUILayout.EndVertical();
+                        EditorGUILayout.Space(10);
+                        if (deleted) break;
+                    }
+                }
+
+                // 追加ボタン
+                if (!deleted && childrenProp.arraySize < maxChildren)
+                {
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.BeginHorizontal();
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("+ 条件", GUILayout.Width(60)))
+                    {
+                        childrenProp.InsertArrayElementAtIndex(childrenProp.arraySize);
+                        InitParamChild(
+                            childrenProp.GetArrayElementAtIndex(childrenProp.arraySize - 1));
+                    }
+                    if (condType != ConditionType.NOT
+                        && GUILayout.Button("+ グループ", GUILayout.Width(90)))
+                    {
+                        childrenProp.InsertArrayElementAtIndex(childrenProp.arraySize);
+                        var ng = childrenProp.GetArrayElementAtIndex(
+                            childrenProp.arraySize - 1);
+                        ng.FindPropertyRelative("type").enumValueIndex =
+                            (int)ConditionType.AND;
+                        var nc = ng.FindPropertyRelative("children");
+                        nc.ClearArray();
+                        nc.InsertArrayElementAtIndex(0);
+                        InitParamChild(nc.GetArrayElementAtIndex(0));
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
+            }
+
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+        }
+
+        /// <summary>パラメータ条件を1行で表示。削除された場合 true を返す。</summary>
+        private bool DrawParamRowInline(
+            SerializedProperty condProp, bool showDelete,
+            int index, SerializedProperty parentArray)
+        {
+            var paramNameProp = condProp.FindPropertyRelative("parameterName");
+            var expectedProp  = condProp.FindPropertyRelative("expectedValue");
+
+            EditorGUILayout.BeginHorizontal();
+            DrawParamDropdownInline(paramNameProp);
+            GUILayout.Label("が", GUILayout.Width(14));
+
+            int valIdx = expectedProp.boolValue ? 0 : 1;
+            int newIdx = GUILayout.Toolbar(valIdx, new[] { "ON", "OFF" },
+                GUILayout.Width(80));
+            if (newIdx != valIdx) expectedProp.boolValue = (newIdx == 0);
+
+            bool deleted = false;
+            if (showDelete && GUILayout.Button("×", GUILayout.Width(22)))
+            {
+                parentArray.DeleteArrayElementAtIndex(index);
+                deleted = true;
+            }
+            EditorGUILayout.EndHorizontal();
+            return deleted;
+        }
+
+        /// <summary>新しい空の Param 子を初期化。</summary>
+        private static void InitParamChild(SerializedProperty child)
+        {
+            child.FindPropertyRelative("type").enumValueIndex = (int)ConditionType.Param;
+            child.FindPropertyRelative("parameterName").stringValue = "";
+            child.FindPropertyRelative("expectedValue").boolValue = true;
+            child.FindPropertyRelative("children").ClearArray();
         }
 
         // ─── ブレンドシェイプ選択 ───
@@ -459,44 +629,41 @@ namespace Lace.Editor
             }
         }
 
-        // ─── パラメータ選択ドロップダウン ───
+        // ─── パラメータ選択ドロップダウン（インライン） ───
 
         /// <summary>
-        /// アバター内の全 CostumeItem のパラメータ名をドロップダウンで選択できるようにする。
+        /// ラベルなしコンパクトパラメータ名ドロップダウン。
+        /// 水平レイアウト内で使用する。
         /// </summary>
-        private void DrawParamDropdown(SerializedProperty paramNameProp)
+        private void DrawParamDropdownInline(SerializedProperty paramNameProp)
         {
             var item = (CostumeItem)target;
             var avatar = FindAvatarDescriptor(item.transform);
-            if (avatar == null) return;
 
-            var allItems = avatar.GetComponentsInChildren<CostumeItem>(true);
             var paramNames = new List<string>();
-            foreach (var ci in allItems)
+            if (avatar != null)
             {
-                if (ci == item) continue; // 自分自身は除外
-                if (!string.IsNullOrEmpty(ci.parameterName) && !paramNames.Contains(ci.parameterName))
-                    paramNames.Add(ci.parameterName);
+                var allItems = avatar.GetComponentsInChildren<CostumeItem>(true);
+                foreach (var ci in allItems)
+                {
+                    if (ci == item) continue;
+                    if (!string.IsNullOrEmpty(ci.parameterName)
+                        && !paramNames.Contains(ci.parameterName))
+                        paramNames.Add(ci.parameterName);
+                }
+                paramNames.Sort();
             }
-
-            paramNames.Sort();
 
             var current = paramNameProp.stringValue;
             if (!string.IsNullOrEmpty(current) && !paramNames.Contains(current))
-            {
                 paramNames.Insert(0, $"(未登録) {current}");
-            }
             else
-            {
                 paramNames.Insert(0, "(未選択)");
-            }
 
             if (paramNames.Count == 1)
             {
                 using (new EditorGUI.DisabledScope(true))
-                {
-                    EditorGUILayout.Popup("パラメータ名", 0, new[] { "(候補なし)" });
-                }
+                    EditorGUILayout.Popup(0, new[] { "(候補なし)" });
                 return;
             }
 
@@ -505,11 +672,9 @@ namespace Lace.Editor
             {
                 if (paramNames[i] == current) { selected = i; break; }
             }
-            int newSel = EditorGUILayout.Popup("パラメータ名", selected, paramNames.ToArray());
+            int newSel = EditorGUILayout.Popup(selected, paramNames.ToArray());
             if (newSel != selected && newSel > 0)
-            {
                 paramNameProp.stringValue = paramNames[newSel];
-            }
         }
 
         // ─── メニュー階層ピッカー ───

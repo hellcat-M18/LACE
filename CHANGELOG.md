@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.2.0] - 2026-03-04
+## [0.2.0] - 2026-03-05
 
 ### Changed
 - **破壊的変更**: CostumeItem を制御対象の GO にアタッチする方式から、空の GO にアタッチして `targetObjects` で制御対象を指定する方式に変更
@@ -9,9 +9,19 @@
 - BlendShapePickerWindow を複数レンダラー対応に変更（シェイプキーの和集合を表示、所属レンダラー名を併記）
 - AnimatorGenerator が `targetObjects` 内の全 GO に対してアニメーションカーブを生成するよう変更
 - バリデーションを `targetObjects` ベースに更新（空リスト・重複制御の検出）
+- サブメニューパスをインストール先メニュー基準に変更（ルート基準から）
+- 条件式エディタをコンパクトなUIに刷新（パラメータ行を1行表示、セパレータ、グループインデント）
+- 制御対象タイプを2択ボタン（GameObject / BlendShape）に変更
+- GameObject モード時のセクション名を「表示条件」に変更
+
+### Added
+- パラメータ設定（Synced / Saved）オプションを追加（折りたたみフォルダウト内）
+- 条件式エディタに自身パラメータの読み取り専用表示を追加
+- 同一パラメータ名で Synced/Saved が不一致の場合のバリデーション警告
+- コンポーネント追加時にパラメータ名をオブジェクト名で自動設定
 
 ### Removed
-- CostumeItemLink マーカーコンポーネントを廃止（CostumeItem が対象 GO から分離したため不要に）
+- CostumeItemLink マーカーコンポーネントを廃止
 - CostumeItemLinkEditor を削除
 - CostumeItem / CostumeItemLink の同一 GO 排他制御を削除
 
