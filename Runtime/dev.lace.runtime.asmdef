@@ -1,0 +1,19 @@
+{
+  "name": "dev.lace.runtime",
+  "rootNamespace": "Lace.Runtime",
+  "references": [
+    "nadena.dev.ndmf.runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "VRCSDKBase.dll",
+    "VRCSDK3A.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

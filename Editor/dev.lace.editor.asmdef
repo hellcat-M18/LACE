@@ -1,0 +1,26 @@
+{
+  "name": "dev.lace.editor",
+  "rootNamespace": "Lace.Editor",
+  "references": [
+    "dev.lace.runtime",
+    "nadena.dev.ndmf",
+    "nadena.dev.ndmf.runtime",
+    "VRC.SDKBase",
+    "VRC.SDK3A",
+    "VRC.SDK3A.Editor",
+    "VRC.SDKBase.Editor",
+    "nadena.dev.modular-avatar.core",
+    "nadena.dev.modular-avatar.core.editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
