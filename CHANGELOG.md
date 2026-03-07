@@ -6,7 +6,13 @@
 - VPM リポジトリ配布に必要なファイル一式を追加
   - `package.json` に `url` フィールドを追加（GitHub Releases の zip を参照）
   - リポジトリルートに `source.json` を追加（VPM リポジトリのメタ情報）
-  - `.github/workflows/release.yml` を追加（リリース時に zip 生成・添付・GitHub Pages デプロイを自動化）
+  - `.github/workflows/release.yml` を追加（リリース時に zip 生成・添付を自動化）
+  - `Website/` を追加（VPM リポジトリ一覧ページ生成用テンプレート）
+
+### Changed
+- VPM 公開用ファイルの配置を、パッケージリポジトリルート基準に修正
+- GitHub Actions の構成を、Release 作成と VPM 一覧生成・Pages 配信の 2 ワークフローに分離
+- VPM 一覧生成処理を `package-list-action` の直接 checkout 実行に変更し、存在しないタグ参照を解消
 
 ## [0.3.0] - 2026-03-07
 

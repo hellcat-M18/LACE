@@ -1,0 +1,56 @@
+name: Build Repo Listing
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published, created, edited, unpublished, deleted, released]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  LIST_PUBLISH_DIRECTORY: Website
+  CI_PATH: ci
+
+jobs:
+  build-listing:
+    name: build-listing
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout local repository
+        uses: actions/checkout@v4
+
+      - name: Checkout package listing automation
+        uses: actions/checkout@v4
+        with:
+          repository: vrchat-community/package-list-action
+          ref: main
+          path: ${{ env.CI_PATH }}
+          clean: false
+
+      - name: Build VPM listing
+        run: |
+          ${{ env.CI_PATH }}/build.cmd BuildRepoListing --root ${{ env.CI_PATH }} --list-publish-directory "$GITHUB_WORKSPACE/${{ env.LIST_PUBLISH_DIRECTORY }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.LIST_PUBLISH_DIRECTORY }}
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,11 +1,9 @@
 name: Build Release
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
-
-env:
-  PKG_NAME: "tool.hellcat.lace"
 
 permissions:
   contents: write
@@ -19,9 +17,9 @@ jobs:
       - name: Set version variables
         id: vars
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
-          ZIP_NAME="${{ env.PKG_NAME }}-${VERSION}.zip"
+          VERSION="$(jq -r '.version' package.json)"
+          TAG="v${VERSION}"
+          ZIP_NAME="tool.hellcat.lace-${VERSION}.zip"
           ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${ZIP_NAME}"
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -36,20 +34,13 @@ jobs:
 
       - name: Build zip
         run: |
-          zip -r "${{ steps.vars.outputs.zip_name }}" . -x ".git/*" -x ".github/*"
+          zip -r "${{ steps.vars.outputs.zip_name }}" . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "Website/*" \
+            -x "source.json"
 
       - name: Upload zip to Release
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.vars.outputs.zip_name }}
-
-      - name: Build VPM package listing
-        uses: vrchat-community/package-list-action@v3.5.3
-        with:
-          repos: '["source.json"]'
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: Website
