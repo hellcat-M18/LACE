@@ -36,9 +36,7 @@ jobs:
         run: |
           zip -r "${{ steps.vars.outputs.zip_name }}" . \
             -x ".git/*" \
-            -x ".github/*" \
-            -x "Website/*" \
-            -x "source.json"
+            -x ".github/*"
 
       - name: Upload zip to Release
         uses: softprops/action-gh-release@v2

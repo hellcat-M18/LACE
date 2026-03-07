@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Removed
+- パッケージrepo内の VPM 一覧生成用ファイルを削除
+- VPM 一覧生成用の `source.json` と `Website/` を削除し、公開サイトを `hellcat-M18/vpm-repos` に移管
+- Pages 配信用の `build-listing.yml` を削除し、このrepoはリリースzip配布専用に整理
+
 ## [0.3.1] - 2026-03-07
 
 ### Added
