@@ -2,8 +2,9 @@ name: Build Repo Listing
 
 on:
   workflow_dispatch:
-  release:
-    types: [published, created, edited, unpublished, deleted, released]
+  workflow_run:
+    workflows: [Build Release]
+    types: [completed]
 
 permissions:
   contents: read
@@ -21,6 +22,7 @@ env:
 jobs:
   build-listing:
     name: build-listing
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
