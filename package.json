@@ -2,7 +2,7 @@
   "name": "tool.hellcat.lace",
   "displayName": "LACE - Logic-driven Avatar Costume Engine",
   "version": "0.3.1",
-  "url": "https://github.com/hellcat-M18/LACE---Logic-driven-Avatar-Costume-Engine/releases/download/v0.3.1/tool.hellcat.lace-0.3.1.zip",
+  "url": "https://github.com/hellcat-M18/LACE/releases/download/v0.3.1/tool.hellcat.lace-0.3.1.zip",
   "unity": "2022.3",
   "description": "VRChatアバター向けNDMFプラグイン。ダッシュボード中心のUIで、衣装トグルと論理条件ベースの制御を非破壊で構築できます。",
   "author": {
