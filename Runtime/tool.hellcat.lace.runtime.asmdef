@@ -1,5 +1,5 @@
 {
-  "name": "dev.lace.runtime",
+  "name": "tool.hellcat.lace.runtime",
   "rootNamespace": "Lace.Runtime",
   "references": [
     "nadena.dev.ndmf.runtime"

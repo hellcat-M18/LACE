@@ -1,8 +1,8 @@
 {
-  "name": "dev.lace.editor",
+  "name": "tool.hellcat.lace.editor",
   "rootNamespace": "Lace.Editor",
   "references": [
-    "dev.lace.runtime",
+    "tool.hellcat.lace.runtime",
     "nadena.dev.ndmf",
     "nadena.dev.ndmf.runtime",
     "VRC.SDKBase",

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1] - 2026-03-07
+
+### Added
+- VPM リポジトリ配布に必要なファイル一式を追加
+  - `package.json` に `url` フィールドを追加（GitHub Releases の zip を参照）
+  - リポジトリルートに `source.json` を追加（VPM リポジトリのメタ情報）
+  - `.github/workflows/release.yml` を追加（リリース時に zip 生成・添付・GitHub Pages デプロイを自動化）
+
 ## [0.3.0] - 2026-03-07
 
 ### Changed

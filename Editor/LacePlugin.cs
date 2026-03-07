@@ -22,7 +22,7 @@ namespace Lace.Editor
     public class LacePlugin : Plugin<LacePlugin>
     {
         public override string DisplayName => "LACE";
-        public override string QualifiedName => "dev.lace";
+        public override string QualifiedName => "tool.hellcat.lace";
 
         /// <summary>
         /// NDMF ErrorReport 用のダミー Localizer。
