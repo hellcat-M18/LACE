@@ -152,6 +152,20 @@ namespace Lace.Editor
                 menuItem.isSynced = item.parameterSynced;
                 menuItem.isSaved = item.parameterSaved;
             }
+
+            // ─── ヒエラルキー順を反映 ────────────────────────────────────────
+            // MA は ModularAvatarMenuInstaller を depth-first で収集するため、
+            // container のシブリングインデックスがメニューの挿入順を決める。
+            // avatarRoot 直下における最初の LaceMenuFolder の祖先と同じ
+            // 位置に container を移動することでヒエラルキー順を維持する。
+            if (allFolders.Length > 0)
+            {
+                var t = allFolders[0].transform;
+                while (t.parent != null && t.parent != avatarRoot)
+                    t = t.parent;
+                if (t.parent == avatarRoot)
+                    container.SetSiblingIndex(t.GetSiblingIndex());
+            }
         }
 
         /// <summary>
